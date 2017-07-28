@@ -4,15 +4,10 @@ import com.panamahitek.PanamaHitek_Arduino;
 import com.panamahitek.ArduinoException;
 import jssc.SerialPortEvent;
 import jssc.SerialPortEventListener;
-import java.io.FileOutputStream;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.swing.table.DefaultTableModel;
 import jssc.SerialPortException;
-import org.apache.poi.hssf.usermodel.HSSFCell;
-import org.apache.poi.hssf.usermodel.HSSFRow;
-import org.apache.poi.hssf.usermodel.HSSFSheet;
-import org.apache.poi.hssf.usermodel.HSSFWorkbook;
 import java.awt.Rectangle;
 import java.io.File;
 import java.io.FileInputStream;
@@ -95,7 +90,6 @@ public class Window extends javax.swing.JFrame {
             dataEMG = (DefaultTableModel) emgTable.getModel();
             //Definimos el texto de los botones 
             StartStop.setText(props.getProperty("textoBoton") + String.valueOf(ensayo));
-            ExcelExport.setVisible(false);
             //crearlogs();
             //Definimos la ruta del archivo de propiedades
             OrdenEmociones.setText(props.getProperty(PruebaTipo.getSelectedItem().toString()).replace("%", "-"));
@@ -130,7 +124,6 @@ public class Window extends javax.swing.JFrame {
     private void initComponents() {
 
         StartStop = new javax.swing.JButton();
-        ExcelExport = new javax.swing.JButton();
         gsrScrollPane = new javax.swing.JScrollPane();
         gsrTable = new javax.swing.JTable();
         emgScrollPane = new javax.swing.JScrollPane();
@@ -149,15 +142,6 @@ public class Window extends javax.swing.JFrame {
         StartStop.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 StartStopActionPerformed(evt);
-            }
-        });
-
-        ExcelExport.setFont(new java.awt.Font("Century Gothic", 0, 14)); // NOI18N
-        ExcelExport.setText("Exportar a Excel");
-        ExcelExport.setEnabled(false);
-        ExcelExport.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                ExcelExportActionPerformed(evt);
             }
         });
 
@@ -257,8 +241,7 @@ public class Window extends javax.swing.JFrame {
                                 .addGap(70, 70, 70)
                                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
                                     .addComponent(CreateFileVol, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                                    .addComponent(CreateChunksAuBT, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                                    .addComponent(ExcelExport, javax.swing.GroupLayout.PREFERRED_SIZE, 193, javax.swing.GroupLayout.PREFERRED_SIZE))))
+                                    .addComponent(CreateChunksAuBT, javax.swing.GroupLayout.DEFAULT_SIZE, 193, Short.MAX_VALUE))))
                         .addGap(0, 0, Short.MAX_VALUE)))
                 .addGap(0, 19, Short.MAX_VALUE))
         );
@@ -287,9 +270,7 @@ public class Window extends javax.swing.JFrame {
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(TableClean)
                     .addComponent(CreateChunksAuBT))
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addComponent(ExcelExport)
-                .addContainerGap())
+                .addGap(44, 44, 44))
         );
 
         OrdenEmociones.getAccessibleContext().setAccessibleName("OrdenEmotions");
@@ -424,62 +405,7 @@ public class Window extends javax.swing.JFrame {
 
 
     }//GEN-LAST:event_StartStopActionPerformed
-    /*
-     Método mediante el cual se genera un archivo excel con los datos recolectados
-     */
-
-    public void FicheroExcel(String input) {
-        double tiempoinicio = Double.parseDouble(gsrTable.getValueAt(0, 0).toString());
-        double tiempofin = Double.parseDouble(gsrTable.getValueAt(dataGSR.getRowCount() - 1, 0).toString());
-        double tiempototal = (tiempofin - tiempoinicio) / 1000;
-
-        HSSFWorkbook libro = new HSSFWorkbook();
-        HSSFSheet hoja = libro.createSheet("Datos GSR");
-        HSSFRow fila = hoja.createRow(0);
-        HSSFCell celda = fila.createCell(0);
-        celda.setCellValue("Time S/M: "); //título 
-        celda = fila.createCell(1);
-        celda.setCellValue(String.valueOf(tiempototal) + "/" + String.format("%1.2f", (tiempototal / 60)));
-        // Se colocan los encabezados
-        fila = hoja.createRow(1);
-        celda = fila.createCell(0);
-        celda.setCellValue("Milisegundo");
-        celda = fila.createCell(1);
-        celda.setCellValue("GSR");
-
-        for (int i = 2; i < dataGSR.getRowCount(); i++) {
-            fila = hoja.createRow(i); //se crea la fila
-            for (int j = 0; j <= 1; j++) {
-                celda = fila.createCell(j); //se crea la celda
-                if (j == 0) {
-                    celda.setCellValue(Integer.parseInt(gsrTable.getValueAt(i, j).toString())); //se le asigna el valor
-                } else {
-                    celda.setCellValue(Integer.parseInt(gsrTable.getValueAt(i, j).toString()));
-                }
-            }
-        }
-        try {
-            FileOutputStream Fichero = new FileOutputStream(input);
-            libro.write(Fichero); //Se general el fichero
-            Fichero.close(); //Se cierra el archivo
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
-
-    //Método del botón para importar los datos a una tabla en excel 
-    private void ExcelExportActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_ExcelExportActionPerformed
-        javax.swing.JFileChooser Ventana = new javax.swing.JFileChooser();
-        String ruta = "";
-        try {
-            if (Ventana.showSaveDialog(null) == Ventana.APPROVE_OPTION) {
-                ruta = Ventana.getSelectedFile().getAbsolutePath() + ".xls";
-                FicheroExcel(ruta);
-            }
-        } catch (Exception ex) {
-            Logger.getLogger(Window.class.getName()).log(Level.SEVERE, null, ex);
-        }
-    }//GEN-LAST:event_ExcelExportActionPerformed
+    
 
     //Función del botón Limpiar Tablas
     private void TableCleanActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_TableCleanActionPerformed
@@ -704,7 +630,6 @@ public class Window extends javax.swing.JFrame {
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JButton CreateChunksAuBT;
     private javax.swing.JButton CreateFileVol;
-    private javax.swing.JButton ExcelExport;
     private javax.swing.JLabel OrdenEmociones;
     private javax.swing.JComboBox PruebaTipo;
     private javax.swing.JButton StartStop;

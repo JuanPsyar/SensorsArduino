@@ -52,8 +52,7 @@
                               <EmptySpace min="-2" pref="70" max="-2" attributes="0"/>
                               <Group type="103" groupAlignment="0" max="-2" attributes="0">
                                   <Component id="CreateFileVol" max="32767" attributes="0"/>
-                                  <Component id="CreateChunksAuBT" max="32767" attributes="0"/>
-                                  <Component id="ExcelExport" min="-2" pref="193" max="-2" attributes="0"/>
+                                  <Component id="CreateChunksAuBT" pref="193" max="32767" attributes="0"/>
                               </Group>
                           </Group>
                       </Group>
@@ -96,9 +95,7 @@
                   <Component id="TableClean" alignment="3" min="-2" max="-2" attributes="0"/>
                   <Component id="CreateChunksAuBT" alignment="3" min="-2" max="-2" attributes="0"/>
               </Group>
-              <EmptySpace max="-2" attributes="0"/>
-              <Component id="ExcelExport" min="-2" max="-2" attributes="0"/>
-              <EmptySpace max="-2" attributes="0"/>
+              <EmptySpace min="-2" pref="44" max="-2" attributes="0"/>
           </Group>
       </Group>
     </DimensionLayout>
@@ -112,18 +109,6 @@
       </Properties>
       <Events>
         <EventHandler event="actionPerformed" listener="java.awt.event.ActionListener" parameters="java.awt.event.ActionEvent" handler="StartStopActionPerformed"/>
-      </Events>
-    </Component>
-    <Component class="javax.swing.JButton" name="ExcelExport">
-      <Properties>
-        <Property name="font" type="java.awt.Font" editor="org.netbeans.beaninfo.editors.FontEditor">
-          <Font name="Century Gothic" size="14" style="0"/>
-        </Property>
-        <Property name="text" type="java.lang.String" value="Exportar a Excel"/>
-        <Property name="enabled" type="boolean" value="false"/>
-      </Properties>
-      <Events>
-        <EventHandler event="actionPerformed" listener="java.awt.event.ActionListener" parameters="java.awt.event.ActionEvent" handler="ExcelExportActionPerformed"/>
       </Events>
     </Component>
     <Container class="javax.swing.JScrollPane" name="gsrScrollPane">

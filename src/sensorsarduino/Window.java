@@ -105,7 +105,6 @@ public class Window extends javax.swing.JFrame {
         try {
             initComponents();
             inicializarValores();
-
 //            en esta línea se hace la conexión a Arduino
             Arduino.arduinoRXTX("COM4", 9600, evento);
         } catch (Exception ex) {
@@ -375,7 +374,7 @@ public class Window extends javax.swing.JFrame {
 
     //Esta función comienza o detiene la recolección de datos en la pantalla de la aplicación
     //para ello llama a la función EnviarSenal()
-    private void StartStopActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_StartStopActionPerformed
+    private void FinalizarEnsayo() {
         try {
             if (State == true) {
                 State = false;
@@ -383,9 +382,6 @@ public class Window extends javax.swing.JFrame {
                 escribirGSR.close();
                 escribirEMG.close();
                 ensayo++;
-                if (!CreateChunksAuBT.isEnabled()) {
-                    CreateChunksAuBT.setEnabled(true);
-                }
                 //se inicializa el texto con el número de ensayo
                 StartStop.setText(props.getProperty("textoBoton") + String.valueOf(ensayo));
                 Voluntario.setEnabled(true);
@@ -397,15 +393,20 @@ public class Window extends javax.swing.JFrame {
                 StartStop.setText("Finalizar Ensayo #" + ensayo);
                 EnviarSenal("1");           //se activa ya la recolección de la data para sacar la media comparativa para los valores del GSR                                
                 Voluntario.setEnabled(false);
+                if (!CreateChunksAuBT.isEnabled()) {
+                    CreateChunksAuBT.setEnabled(true);
+                }
             }
 
         } catch (Exception ex) {
             Logger.getLogger(Window.class.getName()).log(Level.SEVERE, null, ex);
         }
+    }
 
 
+    private void StartStopActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_StartStopActionPerformed
+        FinalizarEnsayo();
     }//GEN-LAST:event_StartStopActionPerformed
-    
 
     //Función del botón Limpiar Tablas
     private void TableCleanActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_TableCleanActionPerformed
@@ -426,35 +427,90 @@ public class Window extends javax.swing.JFrame {
     //y que posteriromente se usarán para el programa AuBT
     private void CreateChunksAuBTActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_CreateChunksAuBTActionPerformed
         // TODO add your handling code here:java 
+        CrearDirectorio("aubt");
+//        try {
+//            if (dataEMG.getRowCount() > 0 && dataGSR.getRowCount() > 0) {
+//                EnviarSenal("0");          //se deshabilita la recolección de datos y el botón para recolectarlos            
+//                //se definen variables para realizar los cortes en la tabla con los datos GSR y EMG
+//                timStampEMG = Double.parseDouble(dataEMG.getValueAt(0, 0).toString());
+//                timStampGSR = Double.parseDouble(dataGSR.getValueAt(0, 0).toString());
+//                String pruebaNum = PruebaTipo.getSelectedItem().toString();
+//                //props.list(System.out);
+//                String directorio = props.getProperty(pruebaNum);
+//                String tipoArchivo = props.getProperty("extension");
+//                //desglosa la propiedad alegria%miedo%ira%sorpresa%tristeza%asco según la selección en el comboBox
+//                String[] sentimentalDir = directorio.split("%");
+//
+//                String aniomesdia = aniomesdia();
+//                String ruta = props.getProperty("RutaFicheros");
+//                //String ruta = "C:/Users/Juan Pablo/Documents/MDS/TFM/Pruebas/DATOS/datosaubt/";
+//                Double emotionTime = Double.parseDouble(props.getProperty("tiempoemocion"));
+//                //para prueba se utilizará la siguiente matriz
+//                //DefaultTableModel Pruebamatriz = matrizprueba();
+//                //for (int i = 0; i < sentimentalDir.length; i++) {         
+//                for (String sentimentalDir1 : sentimentalDir) {       //sugerencia de Java 
+//                    String emotionDir = props.getProperty(sentimentalDir1);
+//                    //    String emotionDir = props.getProperty(sentimentalDir[i]);
+//                    fichero = new File(ruta + aniomesdia + "/" + emotionDir);
+//                    fichero.mkdirs();
+//                    archivoGSR = new File(fichero.getAbsolutePath() + "/GSR" + tipoArchivo);
+//                    archivoEMG = new File(fichero.getAbsolutePath() + "/EMG" + tipoArchivo);
+//                    escribirLogsDir(emotionTime + timStampGSR, emotionTime + timStampEMG, tipoArchivo);
+//                    //escribirLogs(Pruebamatriz, emotionTime + timStampGSR);                    
+//                }
+//                CreateChunksAuBT.setEnabled(false);         //deshabilitamos el botón de Creación de Fichero
+//                State = true;                             //Con esto se cambia el valor del fichero
+//                LimpiarTablas(dataGSR);
+//                LimpiarTablas(dataEMG);
+//                indiceGSR = 0;
+//                indiceEMG = 0;
+//            } else {
+//                JOptionPane.showMessageDialog(null, "No existen datos para crear ficheros");
+//            }
+//
+//        } catch (Exception ex) {
+//            Logger.getLogger(Window.class.getName()).log(Level.SEVERE, null, ex);
+//        }
+    }//GEN-LAST:event_CreateChunksAuBTActionPerformed
+    private void CrearDirectorio(String tipoDirectorio) {
         try {
             if (dataEMG.getRowCount() > 0 && dataGSR.getRowCount() > 0) {
-                EnviarSenal("0");          //se deshabilita la recolección de datos y el botón para recolectarlos            
+                String ruta = "";
+                File ficheroPadre = new File("");
+                String aniomesdia = aniomesdia();
+                String carpetaVol = Voluntario.getSelectedItem().toString();
+                String extension = props.getProperty("extension");
+                //obtengo las emociones que se contemplaron en la prueba 
+                String[] sentimentalDir = OrdenEmociones.getText().split(props.getProperty("TokenPrueba"));
+                Double emotionTime = Double.parseDouble(props.getProperty("tiempoemocion"));
+                FinalizarEnsayo();         //se deshabilita la recolección de datos y el botón para recolectarlos            
                 //se definen variables para realizar los cortes en la tabla con los datos GSR y EMG
                 timStampEMG = Double.parseDouble(dataEMG.getValueAt(0, 0).toString());
                 timStampGSR = Double.parseDouble(dataGSR.getValueAt(0, 0).toString());
-                String pruebaNum = PruebaTipo.getSelectedItem().toString();
-                //props.list(System.out);
-                String directorio = props.getProperty(pruebaNum);
-                String extension = props.getProperty("extension");
-                //desglosa la propiedad alegria%miedo%ira%sorpresa%tristeza%asco según la selección en el comboBox
-                String[] sentimentalDir = directorio.split("%");
-
-                String aniomesdia = aniomesdia();
-                String ruta = props.getProperty("RutaFicheros");
-                //String ruta = "C:/Users/Juan Pablo/Documents/MDS/TFM/Pruebas/DATOS/datosaubt/";
-                Double emotionTime = Double.parseDouble(props.getProperty("tiempoemocion"));
-                //para prueba se utilizará la siguiente matriz
-                //DefaultTableModel Pruebamatriz = matrizprueba();
-                //for (int i = 0; i < sentimentalDir.length; i++) {         
-                for (String sentimentalDir1 : sentimentalDir) {       //sugerencia de Java 
-                    String emotionDir = props.getProperty(sentimentalDir1);
-                    //    String emotionDir = props.getProperty(sentimentalDir[i]);
-                    fichero = new File(ruta + aniomesdia + "/" + emotionDir);
-                    fichero.mkdirs();
+                //según el tipo de directorio se asignará la ruta para almacenar los logs
+                switch (tipoDirectorio) {
+                    case "emociones":
+                        ruta = props.getProperty("RutaLogs");
+                        ficheroPadre = new File(ruta + carpetaVol + "/" + aniomesdia);
+                        ficheroPadre.mkdirs();
+                        break;
+                    case "aubt":
+                        ruta = props.getProperty("RutaAubt");
+                        break;
+                }
+                for (String sentimentalDir1 : sentimentalDir) {
+                    switch (tipoDirectorio) {
+                        case "emociones":
+                            fichero = new File(ficheroPadre.getAbsolutePath() + sentimentalDir1);
+                            break;
+                        case "aubt":
+                            fichero = new File(ruta + aniomesdia + "/" + props.getProperty(sentimentalDir1));
+                            break;
+                    }
                     archivoGSR = new File(fichero.getAbsolutePath() + "/GSR" + extension);
                     archivoEMG = new File(fichero.getAbsolutePath() + "/EMG" + extension);
-                    escribirLogsAuBT(emotionTime + timStampGSR, emotionTime + timStampEMG);
-                    //escribirLogs(Pruebamatriz, emotionTime + timStampGSR);                    
+                    fichero.mkdirs();
+                    escribirLogsDir(emotionTime + timStampGSR, emotionTime + timStampEMG);
                 }
                 CreateChunksAuBT.setEnabled(false);         //deshabilitamos el botón de Creación de Fichero
                 State = true;                             //Con esto se cambia el valor del fichero
@@ -462,6 +518,9 @@ public class Window extends javax.swing.JFrame {
                 LimpiarTablas(dataEMG);
                 indiceGSR = 0;
                 indiceEMG = 0;
+                timStampEMG = 0.0;
+                timStampGSR = 0.0;
+
             } else {
                 JOptionPane.showMessageDialog(null, "No existen datos para crear ficheros");
             }
@@ -469,10 +528,11 @@ public class Window extends javax.swing.JFrame {
         } catch (Exception ex) {
             Logger.getLogger(Window.class.getName()).log(Level.SEVERE, null, ex);
         }
-    }//GEN-LAST:event_CreateChunksAuBTActionPerformed
+    }
 
-    private void escribirLogsAuBT(Double intervaloGSR, Double intervaloEMG) {
-        //private void escribirLogsAuBT(DefaultTableModel matriz, Double intervaloEmocion) {
+    //Función que escribe los logs en los directorios
+    private void escribirLogsDir(Double intervaloGSR, Double intervaloEMG) {
+        //private void escribirLogsDir(DefaultTableModel matriz, Double intervaloEmocion) {
         try {
             escribirGSR = new FileWriter(archivoGSR, true);
             escribirEMG = new FileWriter(archivoEMG, true);
@@ -510,51 +570,10 @@ public class Window extends javax.swing.JFrame {
         OrdenEmociones.setText(props.getProperty(PruebaTipo.getSelectedItem().toString()).replace("%", "-"));
     }//GEN-LAST:event_PruebaTipoActionPerformed
 
+
     private void CreateFileVolActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_CreateFileVolActionPerformed
         // TODO add your handling code here:
-        try {
-            if (dataEMG.getRowCount() > 0 && dataGSR.getRowCount() > 0) {
-                EnviarSenal("0");          //se deshabilita la recolección de datos y el botón para recolectarlos            
-                //se definen variables para realizar los cortes en la tabla con los datos GSR y EMG
-                timStampEMG = Double.parseDouble(dataEMG.getValueAt(0, 0).toString());
-                timStampGSR = Double.parseDouble(dataGSR.getValueAt(0, 0).toString());
-                String pruebaNum = PruebaTipo.getSelectedItem().toString();
-                //props.list(System.out);
-                String directorio = props.getProperty(pruebaNum);
-                String extension = props.getProperty("extension");
-                //desglosa la propiedad alegria%miedo%ira%sorpresa%tristeza%asco según la selección en el comboBox
-                String[] sentimentalDir = directorio.split("%");
-
-                String aniomesdia = aniomesdia();
-                String ruta = props.getProperty("RutaFicheros");
-                //String ruta = "C:/Users/Juan Pablo/Documents/MDS/TFM/Pruebas/DATOS/datosaubt/";
-                Double emotionTime = Double.parseDouble(props.getProperty("tiempoemocion"));
-                //para prueba se utilizará la siguiente matriz
-                //DefaultTableModel Pruebamatriz = matrizprueba();
-                //for (int i = 0; i < sentimentalDir.length; i++) {         
-                for (String sentimentalDir1 : sentimentalDir) {       //sugerencia de Java 
-                    String emotionDir = props.getProperty(sentimentalDir1);
-                    //    String emotionDir = props.getProperty(sentimentalDir[i]);
-                    fichero = new File(ruta + aniomesdia + "/" + emotionDir);
-                    fichero.mkdirs();
-                    archivoGSR = new File(fichero.getAbsolutePath() + "/GSR" + extension);
-                    archivoEMG = new File(fichero.getAbsolutePath() + "/EMG" + extension);
-                    escribirLogsAuBT(emotionTime + timStampGSR, emotionTime + timStampEMG);
-                    //escribirLogs(Pruebamatriz, emotionTime + timStampGSR);                    
-                }
-                CreateChunksAuBT.setEnabled(false);         //deshabilitamos el botón de Creación de Fichero
-                State = true;                             //Con esto se cambia el valor del fichero
-                LimpiarTablas(dataGSR);
-                LimpiarTablas(dataEMG);
-                indiceGSR = 0;
-                indiceEMG = 0;
-            } else {
-                JOptionPane.showMessageDialog(null, "No existen datos para crear ficheros");
-            }
-
-        } catch (Exception ex) {
-            Logger.getLogger(Window.class.getName()).log(Level.SEVERE, null, ex);
-        }
+        CrearDirectorio("emociones");
     }//GEN-LAST:event_CreateFileVolActionPerformed
 
     private void cargarUsuarios() throws Exception {

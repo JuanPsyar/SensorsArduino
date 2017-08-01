@@ -31,24 +31,28 @@ public class Window extends javax.swing.JFrame {
     Rectangle r;
     int Lecturas = 0;
     Date fecha = new Date();
-    File archivoGSR;
-    File archivoEMG;
-    FileWriter escribirGSR;
-    FileWriter escribirEMG;
+    File archivologGSR;
+    File archivologEMG;
+    FileWriter escribirlogGSR;
+    FileWriter escribirlogEMG;
     int numeroprueba = 0;
     String datosArduino = "";
     boolean State = false;
     Calendar Calendario = Calendar.getInstance();
     Integer indiceGSR = 0;
-    Double timStampGSR = 0.0;
+    Integer timStampGSR = 0;
     Integer indiceEMG = 0;
-    Double timStampEMG = 0.0;
+    Integer timStampEMG = 0;
     Properties props = new Properties();
     File fichero;
     int ensayo = 1;
     boolean cambioVol = false;
-    Double timeInicioGSR = 0.0;
-    Double timeInicioEMG = 0.0;
+    Integer timeInicioGSR = 0;
+    Integer timeInicioEMG = 0;
+    File archivoGSRdir;
+    File archivoEMGdir;
+    FileWriter escribirdirGSR;
+    FileWriter escribirdirEMG;
 
     final static String MSSQL_DRIVER = "org.apache.derby.jdbc.EmbeddedDriver";
     final static String MSSQL_JDBC_URL = "jdbc:derby://localhost:1527/sensors";
@@ -295,14 +299,15 @@ public class Window extends javax.swing.JFrame {
             //String ruta = "C:/Users/Juan Pablo/Documents/MDS/TFM/Pruebas/DATOS/arduino/";
             //String aniomesdia = String.valueOf(fecha.getYear()) + String.valueOf(fecha.getMonth()) + String.valueOf(fecha.getDay());
             String idArchivo = carpetaVol.replace("voluntario", props.getProperty("inicialArchivo"));
-            String inicNomArchivo = "/" + idArchivo + "_" + aniomesdia() + "_";
+            String tipoPrueba = PruebaTipo.getSelectedItem().toString().replace("Prueba", "p");
+            String inicNomArchivo = "/" + idArchivo + "_" + aniomesdia() + "_" + tipoPrueba + "_" ;
             String finNomArchivo = StartStop.getText().trim().replace("Ensayo", "en") + props.getProperty("extension");
 //            fecha = Date.from(Instant.now());
 //            String hora = String.valueOf(fecha.getHours()) + String.valueOf(fecha.getMinutes()) + String.valueOf(fecha.getSeconds());
-            archivoGSR = new File(fichero.getAbsolutePath() + inicNomArchivo + "GSR" + finNomArchivo);
-            archivoEMG = new File(fichero.getAbsolutePath() + inicNomArchivo + "EMG" + finNomArchivo);
-            escribirGSR = new FileWriter(archivoGSR, true);
-            escribirEMG = new FileWriter(archivoEMG, true);
+            archivologGSR = new File(fichero.getAbsolutePath() + inicNomArchivo + "GSR" + finNomArchivo);
+            archivologEMG = new File(fichero.getAbsolutePath() + inicNomArchivo + "EMG" + finNomArchivo);
+            escribirlogGSR = new FileWriter(archivologGSR, true);
+            escribirlogEMG = new FileWriter(archivologEMG, true);
         } catch (IOException ex) {
             Logger.getLogger(Window.class.getName()).log(Level.SEVERE, null, ex);
         }
@@ -324,19 +329,19 @@ public class Window extends javax.swing.JFrame {
                 String[] celdas = parts[1].split(tokenCSV);
                 if (celdas.length > 0) {
                     if (!(dataGSR.getRowCount() > 0)) {
-                        timeInicioGSR = Double.parseDouble(celdas[0]);
+                        timeInicioGSR = Integer.parseInt(celdas[0]);
                     }
                     if (!(dataEMG.getRowCount() > 0)) {
-                        timeInicioEMG = Double.parseDouble(celdas[0]);
+                        timeInicioEMG = Integer.parseInt(celdas[0]);
                     }
                     switch (identificador) {
                         case "GSR":
-                            dataGSR.addRow(new Object[]{Double.parseDouble(celdas[0]) - timeInicioGSR, celdas[1]});
-                            escribirGSR.write(Double.parseDouble(celdas[0]) - timeInicioGSR + tokenCSV + celdas[1] + "\r\n");           //en esta sección se escribe en los logs
+                            dataGSR.addRow(new Object[]{Integer.parseInt(celdas[0]) - timeInicioGSR, celdas[1]});
+                            escribirlogGSR.write(Integer.parseInt(celdas[0]) - timeInicioGSR + tokenCSV + celdas[1] + "\r\n");           //en esta sección se escribe en los logs
                             break;
                         case "EMG":
-                            dataEMG.addRow(new Object[]{Double.parseDouble(celdas[0]) - timeInicioEMG, celdas[1]});
-                            escribirEMG.write(Double.parseDouble(celdas[0]) - timeInicioEMG + tokenCSV + celdas[1] + "\r\n");           //en esta sección se escribe en los logs
+                            dataEMG.addRow(new Object[]{Integer.parseInt(celdas[0]) - timeInicioEMG, celdas[1]});
+                            escribirlogEMG.write(Integer.parseInt(celdas[0]) - timeInicioEMG + tokenCSV + celdas[1] + "\r\n");           //en esta sección se escribe en los logs
                             break;
                         default:
                             break;
@@ -378,9 +383,9 @@ public class Window extends javax.swing.JFrame {
         try {
             if (State == true) {
                 State = false;
-                EnviarSenal("0");           //se desactiva ya la recolección de la data
-                escribirGSR.close();
-                escribirEMG.close();
+                EnviarSenal("0");           //se desactiva ya la recolección de la data                
+                escribirlogGSR.close();
+                escribirlogEMG.close();
                 ensayo++;
                 //se inicializa el texto con el número de ensayo
                 StartStop.setText(props.getProperty("textoBoton") + String.valueOf(ensayo));
@@ -388,6 +393,8 @@ public class Window extends javax.swing.JFrame {
                 datosArduino = "";
             } else {
                 State = true;
+                LimpiarTablas(dataGSR);
+                LimpiarTablas(dataEMG);
                 //se crean los logs para almacenar los valores 
                 crearlogs();
                 StartStop.setText("Finalizar Ensayo #" + ensayo);
@@ -405,7 +412,9 @@ public class Window extends javax.swing.JFrame {
 
 
     private void StartStopActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_StartStopActionPerformed
+        //Llamamos al método finalizar ensayo con la variable true para que cierre los logs de Ensayo 
         FinalizarEnsayo();
+
     }//GEN-LAST:event_StartStopActionPerformed
 
     //Función del botón Limpiar Tablas
@@ -453,8 +462,8 @@ public class Window extends javax.swing.JFrame {
 //                    //    String emotionDir = props.getProperty(sentimentalDir[i]);
 //                    fichero = new File(ruta + aniomesdia + "/" + emotionDir);
 //                    fichero.mkdirs();
-//                    archivoGSR = new File(fichero.getAbsolutePath() + "/GSR" + tipoArchivo);
-//                    archivoEMG = new File(fichero.getAbsolutePath() + "/EMG" + tipoArchivo);
+//                    archivologGSR = new File(fichero.getAbsolutePath() + "/GSR" + tipoArchivo);
+//                    archivologEMG = new File(fichero.getAbsolutePath() + "/EMG" + tipoArchivo);
 //                    escribirLogsDir(emotionTime + timStampGSR, emotionTime + timStampEMG, tipoArchivo);
 //                    //escribirLogs(Pruebamatriz, emotionTime + timStampGSR);                    
 //                }
@@ -476,17 +485,18 @@ public class Window extends javax.swing.JFrame {
         try {
             if (dataEMG.getRowCount() > 0 && dataGSR.getRowCount() > 0) {
                 String ruta = "";
+                Boolean ficheroAubt = false;
                 File ficheroPadre = new File("");
                 String aniomesdia = aniomesdia();
                 String carpetaVol = Voluntario.getSelectedItem().toString();
                 String extension = props.getProperty("extension");
                 //obtengo las emociones que se contemplaron en la prueba 
-                String[] sentimentalDir = OrdenEmociones.getText().split(props.getProperty("TokenPrueba"));
-                Double emotionTime = Double.parseDouble(props.getProperty("tiempoemocion"));
+                String[] sentimentalDir = OrdenEmociones.getText().split("-");
+                Integer emotionTime = Integer.parseInt(props.getProperty("tiempoemocion"));
                 FinalizarEnsayo();         //se deshabilita la recolección de datos y el botón para recolectarlos            
                 //se definen variables para realizar los cortes en la tabla con los datos GSR y EMG
-                timStampEMG = Double.parseDouble(dataEMG.getValueAt(0, 0).toString());
-                timStampGSR = Double.parseDouble(dataGSR.getValueAt(0, 0).toString());
+                timStampEMG = Integer.parseInt(dataEMG.getValueAt(0, 0).toString());
+                timStampGSR = Integer.parseInt(dataGSR.getValueAt(0, 0).toString());
                 //según el tipo de directorio se asignará la ruta para almacenar los logs
                 switch (tipoDirectorio) {
                     case "emociones":
@@ -501,25 +511,25 @@ public class Window extends javax.swing.JFrame {
                 for (String sentimentalDir1 : sentimentalDir) {
                     switch (tipoDirectorio) {
                         case "emociones":
-                            fichero = new File(ficheroPadre.getAbsolutePath() + sentimentalDir1);
+                            fichero = new File(ficheroPadre.getAbsolutePath() + "/" + sentimentalDir1);
                             break;
                         case "aubt":
                             fichero = new File(ruta + aniomesdia + "/" + props.getProperty(sentimentalDir1));
+                            ficheroAubt = true;
                             break;
                     }
-                    archivoGSR = new File(fichero.getAbsolutePath() + "/GSR" + extension);
-                    archivoEMG = new File(fichero.getAbsolutePath() + "/EMG" + extension);
                     fichero.mkdirs();
-                    escribirLogsDir(emotionTime + timStampGSR, emotionTime + timStampEMG);
+                    archivoGSRdir = new File(fichero.getAbsolutePath() + "/GSR" + extension);
+                    archivoEMGdir = new File(fichero.getAbsolutePath() + "/EMG" + extension);
+                    escribirLogsDir(emotionTime + timStampGSR, emotionTime + timStampEMG, ficheroAubt);
                 }
                 CreateChunksAuBT.setEnabled(false);         //deshabilitamos el botón de Creación de Fichero
-                State = true;                             //Con esto se cambia el valor del fichero
-                LimpiarTablas(dataGSR);
-                LimpiarTablas(dataEMG);
+//                LimpiarTablas(dataGSR);
+//                LimpiarTablas(dataEMG);
                 indiceGSR = 0;
                 indiceEMG = 0;
-                timStampEMG = 0.0;
-                timStampGSR = 0.0;
+                timStampEMG = 0;
+                timStampGSR = 0;
 
             } else {
                 JOptionPane.showMessageDialog(null, "No existen datos para crear ficheros");
@@ -531,35 +541,44 @@ public class Window extends javax.swing.JFrame {
     }
 
     //Función que escribe los logs en los directorios
-    private void escribirLogsDir(Double intervaloGSR, Double intervaloEMG) {
+    private void escribirLogsDir(Integer intervaloGSR, Integer intervaloEMG, Boolean aubt) {
         //private void escribirLogsDir(DefaultTableModel matriz, Double intervaloEmocion) {
         try {
-            escribirGSR = new FileWriter(archivoGSR, true);
-            escribirEMG = new FileWriter(archivoEMG, true);
+            escribirdirGSR = new FileWriter(archivoGSRdir, true);
+            escribirdirEMG = new FileWriter(archivoEMGdir, true);
+            String tokenFile = props.getProperty("TokenData");
             //comprobamos si se está empezando la recolección de datos
 
             //Empezamos a ingresar los valores en el log de datos GSR
             for (int i = indiceGSR; i < dataGSR.getRowCount(); i++) {
-                if (Double.parseDouble(dataGSR.getValueAt(i, 0).toString()) <= intervaloGSR) {
-                    escribirGSR.write(dataGSR.getValueAt(i, 1) + "\r\n");
+                if (Integer.parseInt(dataGSR.getValueAt(i, 0).toString()) <= intervaloGSR) {
+                    if (aubt) {
+                        escribirdirGSR.write(dataGSR.getValueAt(i, 1) + "\r\n");
+                    } else {
+                        escribirdirGSR.write(dataGSR.getValueAt(i, 0) + tokenFile + dataGSR.getValueAt(i, 1) + "\r\n"); //en esta sección se escribe en los logs                        
+                    }
                 } else {
                     indiceGSR = i;
-                    timStampGSR = Double.parseDouble(dataGSR.getValueAt(i, 0).toString());
+                    timStampGSR = Integer.parseInt(dataGSR.getValueAt(i, 0).toString());
                     i = dataGSR.getRowCount();
                 }
             }
             //Empezamos a ingresar los valores en el log de datos EMG
             for (int i = indiceEMG; i < dataEMG.getRowCount(); i++) {
-                if (Double.parseDouble(dataEMG.getValueAt(i, 0).toString()) <= intervaloEMG) {
-                    escribirEMG.write(dataEMG.getValueAt(i, 1) + "\r\n");
+                if (Integer.parseInt(dataEMG.getValueAt(i, 0).toString()) <= intervaloEMG) {
+                    if (aubt) {
+                        escribirdirEMG.write(dataEMG.getValueAt(i, 1) + "\r\n");
+                    } else {
+                        escribirdirEMG.write(dataEMG.getValueAt(i, 0) + tokenFile + dataEMG.getValueAt(i, 1) + "\r\n");           //en esta sección se escribe en los logs                        
+                    }
                 } else {
                     indiceEMG = i;
-                    timStampEMG = Double.parseDouble(dataEMG.getValueAt(i, 0).toString());
+                    timStampEMG = Integer.parseInt(dataEMG.getValueAt(i, 0).toString());
                     i = dataEMG.getRowCount();
                 }
             }
-            escribirGSR.close();
-            escribirEMG.close();
+            escribirdirGSR.close();
+            escribirdirEMG.close();
         } catch (IOException ex) {
             Logger.getLogger(Window.class.getName()).log(Level.SEVERE, null, ex);
         }

@@ -9,8 +9,11 @@ import java.util.logging.Logger;
 import javax.swing.table.DefaultTableModel;
 import jssc.SerialPortException;
 import java.awt.Rectangle;
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.sql.Connection;
@@ -19,7 +22,9 @@ import java.util.Calendar;
 import java.util.Date;
 import java.util.Properties;
 import javax.swing.DefaultComboBoxModel;
+import javax.swing.JFileChooser;
 import javax.swing.JOptionPane;
+import javax.swing.filechooser.FileNameExtensionFilter;
 
 public class Window extends javax.swing.JFrame {
 
@@ -28,6 +33,7 @@ public class Window extends javax.swing.JFrame {
     String[] parts;
     DefaultTableModel dataGSR;
     DefaultTableModel dataEMG;
+    DefaultTableModel PhyData;
     Rectangle r;
     int Lecturas = 0;
     Date fecha = new Date();
@@ -43,6 +49,8 @@ public class Window extends javax.swing.JFrame {
     Integer timStampGSR = 0;
     Integer indiceEMG = 0;
     Integer timStampEMG = 0;
+    Integer indicePhyData = 0;
+    Integer timStampPhyData = 0;
     Properties props = new Properties();
     File fichero;
     int ensayo = 1;
@@ -51,8 +59,11 @@ public class Window extends javax.swing.JFrame {
     Integer timeInicioEMG = 0;
     File archivoGSRdir;
     File archivoEMGdir;
+    File archivoPhyDatadir;
     FileWriter escribirdirGSR;
     FileWriter escribirdirEMG;
+    FileWriter escribirdirPhyData;
+    String ensayoAnterior = "";
 
     final static String MSSQL_DRIVER = "org.apache.derby.jdbc.EmbeddedDriver";
     final static String MSSQL_JDBC_URL = "jdbc:derby://localhost:1527/sensors";
@@ -92,12 +103,19 @@ public class Window extends javax.swing.JFrame {
 
             dataGSR = (DefaultTableModel) gsrTable.getModel();
             dataEMG = (DefaultTableModel) emgTable.getModel();
-            //Definimos el texto de los botones 
+            PhyData = (DefaultTableModel) phyDataTable.getModel();
+            //Definimos el texto de los botones y ocultamos ciertos elementos de la aplicación
             StartStop.setText(props.getProperty("textoBoton") + String.valueOf(ensayo));
+            ensayoAnterior = StartStop.getText().replace("Ensayo #", "e");
+            phyDataTable.setVisible(false);
+            physDatScrollPane.setVisible(false);
+            PhyDataComboBox.setVisible(false);
+            typePhyDatalabel.setVisible(false);
             //crearlogs();
             //Definimos la ruta del archivo de propiedades
             OrdenEmociones.setText(props.getProperty(PruebaTipo.getSelectedItem().toString()).replace("%", "-"));
             cargarUsuarios();
+
         } catch (Exception ex) {
             Logger.getLogger(Window.class.getName()).log(Level.SEVERE, null, ex);
         }
@@ -138,6 +156,11 @@ public class Window extends javax.swing.JFrame {
         Voluntario = new javax.swing.JComboBox();
         CreateFileVol = new javax.swing.JButton();
         newUser = new javax.swing.JButton();
+        physDatScrollPane = new javax.swing.JScrollPane();
+        phyDataTable = new javax.swing.JTable();
+        loadCSV = new javax.swing.JButton();
+        PhyDataComboBox = new javax.swing.JComboBox();
+        typePhyDatalabel = new javax.swing.JLabel();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
 
@@ -215,6 +238,34 @@ public class Window extends javax.swing.JFrame {
             }
         });
 
+        phyDataTable.setModel(new javax.swing.table.DefaultTableModel(
+            new Object [][] {
+
+            },
+            new String [] {
+                "Timestamp", "PhysioData"
+            }
+        ));
+        physDatScrollPane.setViewportView(phyDataTable);
+
+        loadCSV.setFont(new java.awt.Font("Century Gothic", 0, 14)); // NOI18N
+        loadCSV.setText("CargarCSV");
+        loadCSV.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                loadCSVActionPerformed(evt);
+            }
+        });
+
+        PhyDataComboBox.setModel(new javax.swing.DefaultComboBoxModel(new String[] { "BP", "SPO2", "HRV" }));
+        PhyDataComboBox.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                PhyDataComboBoxActionPerformed(evt);
+            }
+        });
+
+        typePhyDatalabel.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
+        typePhyDatalabel.setText("Dato Fisiológico");
+
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
         getContentPane().setLayout(layout);
         layout.setHorizontalGroup(
@@ -222,31 +273,37 @@ public class Window extends javax.swing.JFrame {
             .addGroup(layout.createSequentialGroup()
                 .addContainerGap()
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING, false)
+                        .addGroup(javax.swing.GroupLayout.Alignment.LEADING, layout.createSequentialGroup()
+                            .addComponent(PruebaTipo, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                            .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                            .addComponent(OrdenEmociones, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                        .addGroup(javax.swing.GroupLayout.Alignment.LEADING, layout.createSequentialGroup()
+                            .addComponent(gsrScrollPane, javax.swing.GroupLayout.PREFERRED_SIZE, 254, javax.swing.GroupLayout.PREFERRED_SIZE)
+                            .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                            .addComponent(emgScrollPane, javax.swing.GroupLayout.PREFERRED_SIZE, 250, javax.swing.GroupLayout.PREFERRED_SIZE)))
                     .addGroup(layout.createSequentialGroup()
-                        .addComponent(PruebaTipo, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addComponent(Voluntario, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                        .addComponent(newUser))
+                    .addGroup(layout.createSequentialGroup()
+                        .addGap(25, 25, 25)
+                        .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
+                            .addComponent(TableClean, javax.swing.GroupLayout.DEFAULT_SIZE, 181, Short.MAX_VALUE)
+                            .addComponent(StartStop, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                        .addGap(70, 70, 70)
+                        .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
+                            .addComponent(loadCSV, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                            .addComponent(CreateFileVol, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                            .addComponent(CreateChunksAuBT, javax.swing.GroupLayout.DEFAULT_SIZE, 193, Short.MAX_VALUE))))
+                .addGap(18, 18, 18)
+                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addComponent(physDatScrollPane, javax.swing.GroupLayout.PREFERRED_SIZE, 156, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addGroup(layout.createSequentialGroup()
+                        .addComponent(typePhyDatalabel, javax.swing.GroupLayout.PREFERRED_SIZE, 97, javax.swing.GroupLayout.PREFERRED_SIZE)
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                        .addComponent(OrdenEmociones, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
-                    .addGroup(layout.createSequentialGroup()
-                        .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                            .addGroup(layout.createSequentialGroup()
-                                .addComponent(Voluntario, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                                .addComponent(newUser))
-                            .addGroup(layout.createSequentialGroup()
-                                .addComponent(gsrScrollPane, javax.swing.GroupLayout.PREFERRED_SIZE, 254, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                                .addComponent(emgScrollPane, javax.swing.GroupLayout.PREFERRED_SIZE, 250, javax.swing.GroupLayout.PREFERRED_SIZE))
-                            .addGroup(layout.createSequentialGroup()
-                                .addGap(25, 25, 25)
-                                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
-                                    .addComponent(TableClean, javax.swing.GroupLayout.DEFAULT_SIZE, 181, Short.MAX_VALUE)
-                                    .addComponent(StartStop, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
-                                .addGap(70, 70, 70)
-                                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
-                                    .addComponent(CreateFileVol, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                                    .addComponent(CreateChunksAuBT, javax.swing.GroupLayout.DEFAULT_SIZE, 193, Short.MAX_VALUE))))
-                        .addGap(0, 0, Short.MAX_VALUE)))
-                .addGap(0, 19, Short.MAX_VALUE))
+                        .addComponent(PhyDataComboBox, javax.swing.GroupLayout.PREFERRED_SIZE, 45, javax.swing.GroupLayout.PREFERRED_SIZE)))
+                .addGap(0, 23, Short.MAX_VALUE))
         );
         layout.setVerticalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -254,26 +311,38 @@ public class Window extends javax.swing.JFrame {
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(Voluntario, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addComponent(newUser))
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                     .addGroup(layout.createSequentialGroup()
-                        .addComponent(PruebaTipo, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                         .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                            .addComponent(emgScrollPane, javax.swing.GroupLayout.PREFERRED_SIZE, 0, Short.MAX_VALUE)
-                            .addComponent(gsrScrollPane, javax.swing.GroupLayout.PREFERRED_SIZE, 0, Short.MAX_VALUE)))
+                            .addGroup(layout.createSequentialGroup()
+                                .addComponent(PruebaTipo, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                                    .addComponent(emgScrollPane, javax.swing.GroupLayout.PREFERRED_SIZE, 0, Short.MAX_VALUE)
+                                    .addComponent(gsrScrollPane, javax.swing.GroupLayout.PREFERRED_SIZE, 0, Short.MAX_VALUE)
+                                    .addComponent(physDatScrollPane, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.PREFERRED_SIZE, 0, Short.MAX_VALUE)))
+                            .addGroup(layout.createSequentialGroup()
+                                .addComponent(OrdenEmociones, javax.swing.GroupLayout.PREFERRED_SIZE, 28, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                .addGap(0, 0, Short.MAX_VALUE)))
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                            .addGroup(layout.createSequentialGroup()
+                                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
+                                    .addComponent(CreateFileVol)
+                                    .addComponent(StartStop, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                                    .addComponent(TableClean)
+                                    .addComponent(CreateChunksAuBT)))
+                            .addComponent(PhyDataComboBox, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED))
                     .addGroup(layout.createSequentialGroup()
-                        .addComponent(OrdenEmociones, javax.swing.GroupLayout.PREFERRED_SIZE, 28, javax.swing.GroupLayout.PREFERRED_SIZE)
-                        .addGap(285, 285, 285)))
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
-                    .addComponent(CreateFileVol, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                    .addComponent(StartStop, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(TableClean)
-                    .addComponent(CreateChunksAuBT))
-                .addGap(44, 44, 44))
+                        .addGap(333, 333, 333)
+                        .addComponent(typePhyDatalabel, javax.swing.GroupLayout.PREFERRED_SIZE, 16, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addGap(47, 47, 47)))
+                .addComponent(loadCSV, javax.swing.GroupLayout.PREFERRED_SIZE, 27, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addContainerGap())
         );
 
         OrdenEmociones.getAccessibleContext().setAccessibleName("OrdenEmotions");
@@ -300,8 +369,8 @@ public class Window extends javax.swing.JFrame {
             //String aniomesdia = String.valueOf(fecha.getYear()) + String.valueOf(fecha.getMonth()) + String.valueOf(fecha.getDay());
             String idArchivo = carpetaVol.replace("voluntario", props.getProperty("inicialArchivo"));
             String tipoPrueba = PruebaTipo.getSelectedItem().toString().replace("Prueba", "p");
-            String inicNomArchivo = "/" + idArchivo + "_" + aniomesdia() + "_" + tipoPrueba + "_" ;
-            String finNomArchivo = StartStop.getText().trim().replace("Ensayo", "en") + props.getProperty("extension");
+            String inicNomArchivo = "/" + idArchivo + "_" + aniomesdia() + "_" + tipoPrueba + "_";
+            String finNomArchivo = ensayoAnterior + props.getProperty("extension");
 //            fecha = Date.from(Instant.now());
 //            String hora = String.valueOf(fecha.getHours()) + String.valueOf(fecha.getMinutes()) + String.valueOf(fecha.getSeconds());
             archivologGSR = new File(fichero.getAbsolutePath() + inicNomArchivo + "GSR" + finNomArchivo);
@@ -393,8 +462,8 @@ public class Window extends javax.swing.JFrame {
                 datosArduino = "";
             } else {
                 State = true;
-                LimpiarTablas(dataGSR);
-                LimpiarTablas(dataEMG);
+                //se toma el nombre del ensayo
+                ensayoAnterior = StartStop.getText().replace("Ensayo #", "e");
                 //se crean los logs para almacenar los valores 
                 crearlogs();
                 StartStop.setText("Finalizar Ensayo #" + ensayo);
@@ -483,53 +552,98 @@ public class Window extends javax.swing.JFrame {
     }//GEN-LAST:event_CreateChunksAuBTActionPerformed
     private void CrearDirectorio(String tipoDirectorio) {
         try {
-            if (dataEMG.getRowCount() > 0 && dataGSR.getRowCount() > 0) {
+            if ((dataEMG.getRowCount() > 0 && dataGSR.getRowCount() > 0) || PhyData.getRowCount() > 0) {
                 String ruta = "";
+                File archivoEMGAuBT = new File("");
+                File archivoGSRAuBT = new File("");
+                String datosEscribir = "";
+                File archivoAuBTPhyData = new File("");
                 Boolean ficheroAubt = false;
                 File ficheroPadre = new File("");
                 String aniomesdia = aniomesdia();
                 String carpetaVol = Voluntario.getSelectedItem().toString();
+                String tipoPrueba = PruebaTipo.getSelectedItem().toString().replace("Prueba", "p");
                 String extension = props.getProperty("extension");
+                String PhyDataType = PhyDataComboBox.getSelectedItem().toString();
                 //obtengo las emociones que se contemplaron en la prueba 
                 String[] sentimentalDir = OrdenEmociones.getText().split("-");
                 Integer emotionTime = Integer.parseInt(props.getProperty("tiempoemocion"));
-                FinalizarEnsayo();         //se deshabilita la recolección de datos y el botón para recolectarlos            
+
                 //se definen variables para realizar los cortes en la tabla con los datos GSR y EMG
-                timStampEMG = Integer.parseInt(dataEMG.getValueAt(0, 0).toString());
-                timStampGSR = Integer.parseInt(dataGSR.getValueAt(0, 0).toString());
+                if (dataEMG.getRowCount() > 0 && dataGSR.getRowCount() > 0) {
+                    timStampEMG = Integer.parseInt(dataEMG.getValueAt(0, 0).toString());
+                    timStampGSR = Integer.parseInt(dataGSR.getValueAt(0, 0).toString());
+                }
+                if (PhyData.getRowCount() > 0) {
+                    timStampPhyData = Integer.parseInt(PhyData.getValueAt(0, 0).toString());
+                }
                 //según el tipo de directorio se asignará la ruta para almacenar los logs
                 switch (tipoDirectorio) {
                     case "emociones":
                         ruta = props.getProperty("RutaLogs");
-                        ficheroPadre = new File(ruta + carpetaVol + "/" + aniomesdia);
+                        ficheroPadre = new File(ruta + carpetaVol + "/" + aniomesdia + "/" + ensayoAnterior + "/" + tipoPrueba);
                         ficheroPadre.mkdirs();
                         break;
                     case "aubt":
                         ruta = props.getProperty("RutaAubt");
+                        //en este punto se crean o actualizan los archivos con las rutas de los ficheros 
+                        //de las distintas señales fisiológicas, en otras palabras se escribe el log general
+                        if (dataEMG.getRowCount() > 0 && dataGSR.getRowCount() > 0) {
+                            archivoGSRAuBT = new File(ruta + "/GSR" + extension);
+                            archivoEMGAuBT = new File(ruta + "/EMG" + extension);
+                        } else if (PhyData.getRowCount() > 0) {
+                            archivoAuBTPhyData = new File(ruta + "/" + PhyDataType + extension);
+                        }
+                        ficheroAubt = true;
                         break;
+
                 }
-                for (String sentimentalDir1 : sentimentalDir) {
+                //for (String sentimentalDir1 : sentimentalDir) {
+                for (int j = 0; j < sentimentalDir.length; j++) {
                     switch (tipoDirectorio) {
                         case "emociones":
-                            fichero = new File(ficheroPadre.getAbsolutePath() + "/" + sentimentalDir1);
+                            fichero = new File(ficheroPadre.getAbsolutePath() + "/" + sentimentalDir[j]);
                             break;
                         case "aubt":
-                            fichero = new File(ruta + aniomesdia + "/" + props.getProperty(sentimentalDir1));
-                            ficheroAubt = true;
+                            fichero = new File(ruta + aniomesdia + "/" + props.getProperty(sentimentalDir[j]));
                             break;
                     }
                     fichero.mkdirs();
-                    archivoGSRdir = new File(fichero.getAbsolutePath() + "/GSR" + extension);
-                    archivoEMGdir = new File(fichero.getAbsolutePath() + "/EMG" + extension);
-                    escribirLogsDir(emotionTime + timStampGSR, emotionTime + timStampEMG, ficheroAubt);
+                    if (dataEMG.getRowCount() > 0 && dataGSR.getRowCount() > 0) {
+                        archivoGSRdir = new File(fichero.getAbsolutePath() + "/GSR" + extension);
+                        archivoEMGdir = new File(fichero.getAbsolutePath() + "/EMG" + extension);
+                    }
+                    if (PhyData.getRowCount() > 0) {
+                        archivoPhyDatadir = new File(fichero.getAbsolutePath() + "/" + PhyDataType + extension);
+                    }
+                    //con esta función escribimos los archivos CSV correspondientes a las disintas señales
+                    //sean para señales EMG, GSR, PB, HRV, SPO2
+                    escribirLogsDir(emotionTime + timStampGSR, emotionTime + timStampEMG, emotionTime + timStampPhyData, ficheroAubt);
+                    //en el caso de ficheros para aubt se escriben el log General 
+                    if (ficheroAubt) {
+                        //comprobamos que se hallan creado los archivos de Log General, en otras palabras
+                        //que hallan datos en las tablas GSR y EMG
+                        if (archivoGSRAuBT.exists() && archivoEMGAuBT.exists()) {
+                            //primero los de datos GSR
+                            datosEscribir = aniomesdia + "/s" + String.valueOf(j + 1) + "/GSR" + extension + "\r\n";
+                            escribirLogGeneral(archivoGSRdir, archivoGSRAuBT, datosEscribir);
+                            datosEscribir = aniomesdia + "/" + String.valueOf(j + 1) + "/EMG" + extension + "\r\n";
+                            escribirLogGeneral(archivoEMGdir, archivoEMGAuBT, datosEscribir);
+                        }
+                        if (archivoAuBTPhyData.exists()) {
+                            datosEscribir = aniomesdia + "/" + String.valueOf(j + 1) + "/" + PhyDataType + extension + "\r\n";
+                            escribirLogGeneral(archivoPhyDatadir, archivoAuBTPhyData, datosEscribir);
+                        }
+                    }
                 }
-                CreateChunksAuBT.setEnabled(false);         //deshabilitamos el botón de Creación de Fichero
 //                LimpiarTablas(dataGSR);
 //                LimpiarTablas(dataEMG);
                 indiceGSR = 0;
                 indiceEMG = 0;
                 timStampEMG = 0;
                 timStampGSR = 0;
+                indicePhyData = 0;
+                timStampPhyData = 0;
 
             } else {
                 JOptionPane.showMessageDialog(null, "No existen datos para crear ficheros");
@@ -540,49 +654,90 @@ public class Window extends javax.swing.JFrame {
         }
     }
 
-    //Función que escribe los logs en los directorios
-    private void escribirLogsDir(Integer intervaloGSR, Integer intervaloEMG, Boolean aubt) {
-        //private void escribirLogsDir(DefaultTableModel matriz, Double intervaloEmocion) {
+    //Función para actualizar o crear el log general de las señales fisiologicas en directorios AuBT
+    private void escribirLogGeneral(File archivoEscrito, File archivoGeneral, String rutaArchivoEscrito) {
         try {
-            escribirdirGSR = new FileWriter(archivoGSRdir, true);
-            escribirdirEMG = new FileWriter(archivoEMGdir, true);
-            String tokenFile = props.getProperty("TokenData");
-            //comprobamos si se está empezando la recolección de datos
-
-            //Empezamos a ingresar los valores en el log de datos GSR
-            for (int i = indiceGSR; i < dataGSR.getRowCount(); i++) {
-                if (Integer.parseInt(dataGSR.getValueAt(i, 0).toString()) <= intervaloGSR) {
-                    if (aubt) {
-                        escribirdirGSR.write(dataGSR.getValueAt(i, 1) + "\r\n");
-                    } else {
-                        escribirdirGSR.write(dataGSR.getValueAt(i, 0) + tokenFile + dataGSR.getValueAt(i, 1) + "\r\n"); //en esta sección se escribe en los logs                        
-                    }
-                } else {
-                    indiceGSR = i;
-                    timStampGSR = Integer.parseInt(dataGSR.getValueAt(i, 0).toString());
-                    i = dataGSR.getRowCount();
-                }
+            if (archivoEscrito.length() > 0) {
+                FileWriter escribirLogG;
+                escribirLogG = new FileWriter(archivoGeneral, true);
+                escribirLogG.write(rutaArchivoEscrito);
+                escribirLogG.close();
             }
-            //Empezamos a ingresar los valores en el log de datos EMG
-            for (int i = indiceEMG; i < dataEMG.getRowCount(); i++) {
-                if (Integer.parseInt(dataEMG.getValueAt(i, 0).toString()) <= intervaloEMG) {
-                    if (aubt) {
-                        escribirdirEMG.write(dataEMG.getValueAt(i, 1) + "\r\n");
-                    } else {
-                        escribirdirEMG.write(dataEMG.getValueAt(i, 0) + tokenFile + dataEMG.getValueAt(i, 1) + "\r\n");           //en esta sección se escribe en los logs                        
-                    }
-                } else {
-                    indiceEMG = i;
-                    timStampEMG = Integer.parseInt(dataEMG.getValueAt(i, 0).toString());
-                    i = dataEMG.getRowCount();
-                }
-            }
-            escribirdirGSR.close();
-            escribirdirEMG.close();
         } catch (IOException ex) {
             Logger.getLogger(Window.class.getName()).log(Level.SEVERE, null, ex);
         }
     }
+
+    //Función que escribe los logs en los directorios
+    private void escribirLogsDir(Integer intervaloGSR, Integer intervaloEMG, Integer intervaloPhyData, Boolean aubt) {
+        //private void escribirLogsDir(DefaultTableModel matriz, Double intervaloEmocion) {
+        try {
+            //este será el token con el que separaremos los archivos CSV
+            String tokenFile = props.getProperty("TokenData");
+            if (dataEMG.getRowCount() > 0 && dataGSR.getRowCount() > 0) {
+                escribirdirGSR = new FileWriter(archivoGSRdir, true);
+                escribirdirEMG = new FileWriter(archivoEMGdir, true);
+
+                //Empezamos a ingresar los valores en el log de datos GSR
+                for (int i = indiceGSR; i < dataGSR.getRowCount(); i++) {
+                    if (Integer.parseInt(dataGSR.getValueAt(i, 0).toString()) <= intervaloGSR) {
+                        if (aubt) {
+                            escribirdirGSR.write(dataGSR.getValueAt(i, 1) + "\r\n");
+                        } else {
+                            escribirdirGSR.write(dataGSR.getValueAt(i, 0) + tokenFile + dataGSR.getValueAt(i, 1) + "\r\n"); //en esta sección se escribe en los logs                        
+                        }
+                    } else {
+                        indiceGSR = i;
+                        timStampGSR = Integer.parseInt(dataGSR.getValueAt(i, 0).toString());
+                        i = dataGSR.getRowCount();
+                    }
+                }
+                //Empezamos a ingresar los valores en el log de datos EMG
+                for (int i = indiceEMG; i < dataEMG.getRowCount(); i++) {
+                    if (Integer.parseInt(dataEMG.getValueAt(i, 0).toString()) <= intervaloEMG) {
+                        if (aubt) {
+                            escribirdirEMG.write(dataEMG.getValueAt(i, 1) + "\r\n");
+                        } else {
+                            escribirdirEMG.write(dataEMG.getValueAt(i, 0) + tokenFile + dataEMG.getValueAt(i, 1) + "\r\n");           //en esta sección se escribe en los logs                        
+                        }
+                    } else {
+                        indiceEMG = i;
+                        timStampEMG = Integer.parseInt(dataEMG.getValueAt(i, 0).toString());
+                        i = dataEMG.getRowCount();
+                    }
+                }
+                escribirdirGSR.close();
+                escribirdirEMG.close();
+            }
+            if (PhyData.getRowCount() > 0) {
+                escribirdirPhyData = new FileWriter(archivoPhyDatadir, true);
+
+                //Empezamos a ingresar los valores en el log de datos fisiólogicos
+                for (int i = indicePhyData; i < PhyData.getRowCount(); i++) {
+                    if (Integer.parseInt(PhyData.getValueAt(i, 0).toString()) <= intervaloPhyData) {
+                        if (aubt) {
+                            escribirdirPhyData.write(PhyData.getValueAt(i, 1) + "\r\n");
+                        } else {
+                            escribirdirPhyData.write(PhyData.getValueAt(i, 0) + tokenFile + PhyData.getValueAt(i, 1) + "\r\n"); //en esta sección se escribe en los logs                        
+                        }
+                    } else {
+                        indicePhyData = i;
+                        timStampPhyData = Integer.parseInt(PhyData.getValueAt(i, 0).toString());
+                        i = PhyData.getRowCount();
+                    }
+                }
+                escribirdirPhyData.close();
+            }
+        } catch (IOException ex) {
+            Logger.getLogger(Window.class.getName()).log(Level.SEVERE, null, ex);
+        }
+    }
+
+    //Función que crea el archivo con las cabeceras para los ficheros AuBT
+    private void creararchivoRutas() {
+
+    }
+
 
     private void PruebaTipoActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_PruebaTipoActionPerformed
         // TODO add your handling code here:
@@ -625,6 +780,66 @@ public class Window extends javax.swing.JFrame {
         ensayo = 1;
         StartStop.setText(props.getProperty("textoBoton") + String.valueOf(ensayo));
     }//GEN-LAST:event_VoluntarioActionPerformed
+
+    private File obtenerArchivo() {
+        JFileChooser fileChooser = new JFileChooser(props.getProperty("RutaCargaCSV"));
+
+        FileNameExtensionFilter filtro = new FileNameExtensionFilter(null, props.getProperty("extension").replace(".", ""));
+        fileChooser.setFileFilter(filtro);
+        fileChooser.setFileSelectionMode(JFileChooser.FILES_ONLY);
+        int resultado = fileChooser.showOpenDialog(this);
+        if (resultado == JFileChooser.CANCEL_OPTION) {
+            return null;
+        } else {
+            File archivoSeleccionado = fileChooser.getSelectedFile();
+            return archivoSeleccionado;
+        }
+    }
+
+    // método para cargar un archivo CSV dentro de una tabla en Java
+    //tomado de https://balusoft.wordpress.com/2012/06/25/abrir-un-archivo-de-excel-csv-en-java/
+    private void procesarArchivo() {
+        File archivoCSV = obtenerArchivo();
+        if (archivoCSV.exists()) {
+            BufferedReader input = null;
+            try {
+                input = new BufferedReader(new FileReader(archivoCSV));
+                String linea;
+                while ((linea = input.readLine()) != null) {
+                    String[] filaCSV = linea.split(props.getProperty("TokenCSV"));
+                    PhyData.addRow(new Object[]{Integer.parseInt(filaCSV[0]), Integer.parseInt(filaCSV[1])});
+                }
+                input.close();
+            } catch (FileNotFoundException ex) {
+                Logger.getLogger(Window.class.getName()).log(Level.SEVERE, null, ex);
+            } catch (IOException ex) {
+                Logger.getLogger(Window.class.getName()).log(Level.SEVERE, null, ex);
+            } finally {
+                try {
+                    input.close();
+                } catch (IOException ex) {
+                    Logger.getLogger(Window.class.getName()).log(Level.SEVERE, null, ex);
+                }
+            }
+
+        }
+    }
+
+
+    private void loadCSVActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_loadCSVActionPerformed
+        // TODO add your handling code here:
+        //hacemos visibles los elementos
+        phyDataTable.setVisible(true);
+        physDatScrollPane.setVisible(true);
+        PhyDataComboBox.setVisible(true);
+        typePhyDatalabel.setVisible(true);
+        LimpiarTablas(PhyData);
+        procesarArchivo();
+    }//GEN-LAST:event_loadCSVActionPerformed
+
+    private void PhyDataComboBoxActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_PhyDataComboBoxActionPerformed
+        // TODO add your handling code here:
+    }//GEN-LAST:event_PhyDataComboBoxActionPerformed
 
     /**
      * @param args the command line arguments
@@ -669,6 +884,7 @@ public class Window extends javax.swing.JFrame {
     private javax.swing.JButton CreateChunksAuBT;
     private javax.swing.JButton CreateFileVol;
     private javax.swing.JLabel OrdenEmociones;
+    private javax.swing.JComboBox PhyDataComboBox;
     private javax.swing.JComboBox PruebaTipo;
     private javax.swing.JButton StartStop;
     private javax.swing.JButton TableClean;
@@ -677,6 +893,10 @@ public class Window extends javax.swing.JFrame {
     private javax.swing.JTable emgTable;
     private javax.swing.JScrollPane gsrScrollPane;
     private javax.swing.JTable gsrTable;
+    private javax.swing.JButton loadCSV;
     private javax.swing.JButton newUser;
+    private javax.swing.JTable phyDataTable;
+    private javax.swing.JScrollPane physDatScrollPane;
+    private javax.swing.JLabel typePhyDatalabel;
     // End of variables declaration//GEN-END:variables
 }

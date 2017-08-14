@@ -19,6 +19,8 @@ import java.io.IOException;
 import java.sql.Connection;
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.Date;
 import java.util.Properties;
 import javax.swing.DefaultComboBoxModel;
@@ -64,7 +66,7 @@ public class Window extends javax.swing.JFrame {
     FileWriter escribirdirEMG;
     FileWriter escribirdirPhyData;
     String ensayoAnterior = "";
-
+    Integer regulaTime = 0;
     final static String MSSQL_DRIVER = "org.apache.derby.jdbc.EmbeddedDriver";
     final static String MSSQL_JDBC_URL = "jdbc:derby://localhost:1527/sensors";
     final static String MSSQL_USERNAME = "jp";
@@ -298,12 +300,12 @@ public class Window extends javax.swing.JFrame {
                             .addComponent(CreateChunksAuBT, javax.swing.GroupLayout.DEFAULT_SIZE, 193, Short.MAX_VALUE))))
                 .addGap(18, 18, 18)
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addComponent(physDatScrollPane, javax.swing.GroupLayout.PREFERRED_SIZE, 156, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addGroup(layout.createSequentialGroup()
                         .addComponent(typePhyDatalabel, javax.swing.GroupLayout.PREFERRED_SIZE, 97, javax.swing.GroupLayout.PREFERRED_SIZE)
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                        .addComponent(PhyDataComboBox, javax.swing.GroupLayout.PREFERRED_SIZE, 45, javax.swing.GroupLayout.PREFERRED_SIZE)))
-                .addGap(0, 23, Short.MAX_VALUE))
+                        .addComponent(PhyDataComboBox, 0, 68, Short.MAX_VALUE))
+                    .addComponent(physDatScrollPane, javax.swing.GroupLayout.PREFERRED_SIZE, 0, Short.MAX_VALUE))
+                .addGap(10, 10, 10))
         );
         layout.setVerticalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -506,49 +508,7 @@ public class Window extends javax.swing.JFrame {
     private void CreateChunksAuBTActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_CreateChunksAuBTActionPerformed
         // TODO add your handling code here:java 
         CrearDirectorio("aubt");
-//        try {
-//            if (dataEMG.getRowCount() > 0 && dataGSR.getRowCount() > 0) {
-//                EnviarSenal("0");          //se deshabilita la recolección de datos y el botón para recolectarlos            
-//                //se definen variables para realizar los cortes en la tabla con los datos GSR y EMG
-//                timStampEMG = Double.parseDouble(dataEMG.getValueAt(0, 0).toString());
-//                timStampGSR = Double.parseDouble(dataGSR.getValueAt(0, 0).toString());
-//                String pruebaNum = PruebaTipo.getSelectedItem().toString();
-//                //props.list(System.out);
-//                String directorio = props.getProperty(pruebaNum);
-//                String tipoArchivo = props.getProperty("extension");
-//                //desglosa la propiedad alegria%miedo%ira%sorpresa%tristeza%asco según la selección en el comboBox
-//                String[] sentimentalDir = directorio.split("%");
-//
-//                String aniomesdia = aniomesdia();
-//                String ruta = props.getProperty("RutaFicheros");
-//                //String ruta = "C:/Users/Juan Pablo/Documents/MDS/TFM/Pruebas/DATOS/datosaubt/";
-//                Double emotionTime = Double.parseDouble(props.getProperty("tiempoemocion"));
-//                //para prueba se utilizará la siguiente matriz
-//                //DefaultTableModel Pruebamatriz = matrizprueba();
-//                //for (int i = 0; i < sentimentalDir.length; i++) {         
-//                for (String sentimentalDir1 : sentimentalDir) {       //sugerencia de Java 
-//                    String emotionDir = props.getProperty(sentimentalDir1);
-//                    //    String emotionDir = props.getProperty(sentimentalDir[i]);
-//                    fichero = new File(ruta + aniomesdia + "/" + emotionDir);
-//                    fichero.mkdirs();
-//                    archivologGSR = new File(fichero.getAbsolutePath() + "/GSR" + tipoArchivo);
-//                    archivologEMG = new File(fichero.getAbsolutePath() + "/EMG" + tipoArchivo);
-//                    escribirLogsDir(emotionTime + timStampGSR, emotionTime + timStampEMG, tipoArchivo);
-//                    //escribirLogs(Pruebamatriz, emotionTime + timStampGSR);                    
-//                }
-//                CreateChunksAuBT.setEnabled(false);         //deshabilitamos el botón de Creación de Fichero
-//                State = true;                             //Con esto se cambia el valor del fichero
-//                LimpiarTablas(dataGSR);
-//                LimpiarTablas(dataEMG);
-//                indiceGSR = 0;
-//                indiceEMG = 0;
-//            } else {
-//                JOptionPane.showMessageDialog(null, "No existen datos para crear ficheros");
-//            }
-//
-//        } catch (Exception ex) {
-//            Logger.getLogger(Window.class.getName()).log(Level.SEVERE, null, ex);
-//        }
+//        
     }//GEN-LAST:event_CreateChunksAuBTActionPerformed
     private void CrearDirectorio(String tipoDirectorio) {
         try {
@@ -567,7 +527,26 @@ public class Window extends javax.swing.JFrame {
                 String PhyDataType = PhyDataComboBox.getSelectedItem().toString();
                 //obtengo las emociones que se contemplaron en la prueba 
                 String[] sentimentalDir = OrdenEmociones.getText().split("-");
+                //obtengo los intervalos de tiempo de presentación de cada emoción
                 Integer emotionTime = Integer.parseInt(props.getProperty("tiempoemocion"));
+                //obtengo el tiempo de regulación antes de empezar la presentación 
+                regulaTime = Integer.parseInt(props.getProperty("regulacionT"));
+                //en el caso de que los logs vengan en la primera fila con el nombre del campo entonces el indice se tomara desde 1
+                //indiceEMG = indiceGSR = indicePhyData = 1;
+
+                //para trabajar con el toolbox AuBT se necesita que los ficheros tengo nombres acordes al toolbox
+                String typePhyDataAubt = "";
+                switch (PhyDataType) {
+                    case "BP":
+                        typePhyDataAubt = "bp";
+                        break;
+                    case "SPO2":
+                        typePhyDataAubt = "rsp";
+                        break;
+                    case "HRV":
+                        typePhyDataAubt = "ecg";
+                        break;
+                }
 
                 //se definen variables para realizar los cortes en la tabla con los datos GSR y EMG
                 if (dataEMG.getRowCount() > 0 && dataGSR.getRowCount() > 0) {
@@ -585,14 +564,14 @@ public class Window extends javax.swing.JFrame {
                         ficheroPadre.mkdirs();
                         break;
                     case "aubt":
-                        ruta = props.getProperty("RutaAubt");
+                        ruta = props.getProperty("RutaAubt") + carpetaVol + "/";
                         //en este punto se crean o actualizan los archivos con las rutas de los ficheros 
                         //de las distintas señales fisiológicas, en otras palabras se escribe el log general
                         if (dataEMG.getRowCount() > 0 && dataGSR.getRowCount() > 0) {
-                            archivoGSRAuBT = new File(ruta + "/GSR" + extension);
-                            archivoEMGAuBT = new File(ruta + "/EMG" + extension);
+                            archivoGSRAuBT = new File(ruta + "/sc" + extension);
+                            archivoEMGAuBT = new File(ruta + "/emg" + extension);
                         } else if (PhyData.getRowCount() > 0) {
-                            archivoAuBTPhyData = new File(ruta + "/" + PhyDataType + extension);
+                            archivoAuBTPhyData = new File(ruta + "/" + typePhyDataAubt + extension);
                         }
                         ficheroAubt = true;
                         break;
@@ -618,20 +597,24 @@ public class Window extends javax.swing.JFrame {
                     }
                     //con esta función escribimos los archivos CSV correspondientes a las disintas señales
                     //sean para señales EMG, GSR, PB, HRV, SPO2
-                    escribirLogsDir(emotionTime + timStampGSR, emotionTime + timStampEMG, emotionTime + timStampPhyData, ficheroAubt);
+                    if ((PhyData.getRowCount() > 0 || (dataEMG.getRowCount() > 0 && dataGSR.getRowCount() > 0)) && regulaTime > 0) {
+                        regularLogs();
+                    } else {
+                        escribirLogsDir(emotionTime + timStampGSR, emotionTime + timStampEMG, emotionTime + timStampPhyData, ficheroAubt);
+                    }
                     //en el caso de ficheros para aubt se escriben el log General 
                     if (ficheroAubt) {
                         //comprobamos que se hallan creado los archivos de Log General, en otras palabras
                         //que hallan datos en las tablas GSR y EMG
-                        if (archivoGSRAuBT.exists() && archivoEMGAuBT.exists()) {
+                        if (dataEMG.getRowCount() > 0 && dataGSR.getRowCount() > 0) {
                             //primero los de datos GSR
-                            datosEscribir = aniomesdia + "/s" + String.valueOf(j + 1) + "/GSR" + extension + "\r\n";
+                            datosEscribir = aniomesdia + "/s" + String.valueOf(j + 1) + "/sc.mat" + "\r\n";
                             escribirLogGeneral(archivoGSRdir, archivoGSRAuBT, datosEscribir);
-                            datosEscribir = aniomesdia + "/" + String.valueOf(j + 1) + "/EMG" + extension + "\r\n";
+                            datosEscribir = aniomesdia + "/" + String.valueOf(j + 1) + "/emg.mat" + "\r\n";
                             escribirLogGeneral(archivoEMGdir, archivoEMGAuBT, datosEscribir);
                         }
-                        if (archivoAuBTPhyData.exists()) {
-                            datosEscribir = aniomesdia + "/" + String.valueOf(j + 1) + "/" + PhyDataType + extension + "\r\n";
+                        if (PhyData.getRowCount() > 0) {
+                            datosEscribir = aniomesdia + "/" + String.valueOf(j + 1) + "/" + typePhyDataAubt + ".mat" + "\r\n";
                             escribirLogGeneral(archivoPhyDatadir, archivoAuBTPhyData, datosEscribir);
                         }
                     }
@@ -644,7 +627,7 @@ public class Window extends javax.swing.JFrame {
                 timStampGSR = 0;
                 indicePhyData = 0;
                 timStampPhyData = 0;
-
+                datosEscribir = "";
             } else {
                 JOptionPane.showMessageDialog(null, "No existen datos para crear ficheros");
             }
@@ -733,11 +716,42 @@ public class Window extends javax.swing.JFrame {
         }
     }
 
-    //Función que crea el archivo con las cabeceras para los ficheros AuBT
-    private void creararchivoRutas() {
-
+    //Función para despreciar los datos iniciales de entrada de los logs debido a un tiempo previo de regulación de las pulseras
+    //o los sensores
+    private void regularLogs() {
+        //private void escribirLogsDir(DefaultTableModel matriz, Double intervaloEmocion) {
+        try {
+            //empezamos a recorrer las tablas para ajustar la escritura de los logs al tiempo de la presentación. 
+            //esto siempre y cuando se tome un tiempo para que se ajusten los sensores al usuario
+            if (dataEMG.getRowCount() > 0 && dataGSR.getRowCount() > 0) {
+                for (int i = indiceGSR; i < dataGSR.getRowCount(); i++) {
+                    if (Integer.parseInt(dataGSR.getValueAt(i, 0).toString()) > regulaTime) {
+                        indiceGSR = i;
+                        timStampGSR = Integer.parseInt(dataGSR.getValueAt(i, 0).toString());
+                        i = dataGSR.getRowCount();
+                    }
+                }
+                for (int i = indiceEMG; i < dataEMG.getRowCount(); i++) {
+                    if (Integer.parseInt(dataEMG.getValueAt(i, 0).toString()) <= regulaTime) {
+                        indiceEMG = i;
+                        timStampEMG = Integer.parseInt(dataEMG.getValueAt(i, 0).toString());
+                        i = dataEMG.getRowCount();
+                    }
+                }
+            }
+            if (PhyData.getRowCount() > 0) {
+                for (int i = indicePhyData; i < PhyData.getRowCount(); i++) {
+                    if (Integer.parseInt(PhyData.getValueAt(i, 0).toString()) <= regulaTime) {
+                        indicePhyData = i;
+                        timStampPhyData = Integer.parseInt(PhyData.getValueAt(i, 0).toString());
+                        i = PhyData.getRowCount();
+                    }
+                }
+            }
+        } catch (Exception ex) {
+            Logger.getLogger(Window.class.getName()).log(Level.SEVERE, null, ex);
+        }
     }
-
 
     private void PruebaTipoActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_PruebaTipoActionPerformed
         // TODO add your handling code here:
@@ -754,6 +768,8 @@ public class Window extends javax.swing.JFrame {
         Connection dbCon = conDB.dbConexion(MSSQL_DRIVER, MSSQL_JDBC_URL, MSSQL_USERNAME,
                 MSSQL_PASSWORD, MSSQL_SCHEMA);
         ArrayList<String> listaVol = conDB.listaNombres(dbCon);
+        Comparator<String> comparador = Collections.reverseOrder();
+        Collections.sort(listaVol, comparador);
         Voluntario.setModel(new DefaultComboBoxModel(listaVol.toArray()));
     }
 
@@ -784,7 +800,7 @@ public class Window extends javax.swing.JFrame {
     private File obtenerArchivo() {
         JFileChooser fileChooser = new JFileChooser(props.getProperty("RutaCargaCSV"));
 
-        FileNameExtensionFilter filtro = new FileNameExtensionFilter(null, props.getProperty("extension").replace(".", ""));
+        FileNameExtensionFilter filtro = new FileNameExtensionFilter(null, props.getProperty("formatoCarga"));
         fileChooser.setFileFilter(filtro);
         fileChooser.setFileSelectionMode(JFileChooser.FILES_ONLY);
         int resultado = fileChooser.showOpenDialog(this);
@@ -793,6 +809,17 @@ public class Window extends javax.swing.JFrame {
         } else {
             File archivoSeleccionado = fileChooser.getSelectedFile();
             return archivoSeleccionado;
+        }
+    }
+
+    //Método para validar si la primera línea del archivo CSV es un string o un numeric
+    private boolean isNumeric(String[] dataPhy) {
+        try {
+            Integer.parseInt(dataPhy[0]);
+            Integer.parseInt(dataPhy[1]);
+            return true;
+        } catch (NumberFormatException nfe) {
+            return false;
         }
     }
 
@@ -807,9 +834,12 @@ public class Window extends javax.swing.JFrame {
                 String linea;
                 while ((linea = input.readLine()) != null) {
                     String[] filaCSV = linea.split(props.getProperty("TokenCSV"));
-                    PhyData.addRow(new Object[]{Integer.parseInt(filaCSV[0]), Integer.parseInt(filaCSV[1])});
+                    if (isNumeric(filaCSV)) //PhyData.addRow(new Object[]{Integer.parseInt(filaCSV[0]), Integer.parseInt(filaCSV[1])});
+                    {
+                        PhyData.addRow(new Object[]{filaCSV[0], filaCSV[1]});
+                    }
                 }
-                input.close();
+
             } catch (FileNotFoundException ex) {
                 Logger.getLogger(Window.class.getName()).log(Level.SEVERE, null, ex);
             } catch (IOException ex) {

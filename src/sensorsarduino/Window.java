@@ -608,13 +608,13 @@ public class Window extends javax.swing.JFrame {
                         //que hallan datos en las tablas GSR y EMG
                         if (dataEMG.getRowCount() > 0 && dataGSR.getRowCount() > 0) {
                             //primero los de datos GSR
-                            datosEscribir = aniomesdia + "/s" + String.valueOf(j + 1) + "/sc.mat" + "\r\n";
+                            datosEscribir = aniomesdia + "\"s" + String.valueOf(j + 1) + "\"sc.mat" + "\r\n";
                             escribirLogGeneral(archivoGSRdir, archivoGSRAuBT, datosEscribir);
-                            datosEscribir = aniomesdia + "/" + String.valueOf(j + 1) + "/emg.mat" + "\r\n";
+                            datosEscribir = aniomesdia + "\"s" + String.valueOf(j + 1) + "/emg.mat" + "\r\n";
                             escribirLogGeneral(archivoEMGdir, archivoEMGAuBT, datosEscribir);
                         }
                         if (PhyData.getRowCount() > 0) {
-                            datosEscribir = aniomesdia + "/" + String.valueOf(j + 1) + "/" + typePhyDataAubt + ".mat" + "\r\n";
+                            datosEscribir = aniomesdia + "\"s" + String.valueOf(j + 1) + "\"" + typePhyDataAubt + ".mat" + "\r\n";
                             escribirLogGeneral(archivoPhyDatadir, archivoAuBTPhyData, datosEscribir);
                         }
                     }
@@ -855,7 +855,7 @@ public class Window extends javax.swing.JFrame {
         }
     }
 
-
+//método para leer un archivo de datos fisiológicos en formato CSV
     private void loadCSVActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_loadCSVActionPerformed
         // TODO add your handling code here:
         //hacemos visibles los elementos
